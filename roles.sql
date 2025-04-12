@@ -1,22 +1,42 @@
--- Creating roles for Members 2 & 3
+-- Create roles
+CREATE ROLE librarian;
+CREATE ROLE catalog_assistant;
+CREATE ROLE viewer;
+CREATE ROLE sys_admin;
 
-CREATE ROLE 'member2_role';
-CREATE ROLE 'member3_role';
+-- Create users
+CREATE USER 'lib1'@'localhost' IDENTIFIED BY 'lib123';
+CREATE USER 'cat1'@'localhost' IDENTIFIED BY 'cat123';
+CREATE USER 'view1'@'localhost' IDENTIFIED BY 'view123';
+CREATE USER 'admin1'@'localhost' IDENTIFIED BY 'admin123';
 
--- Creating users for members 2 & 3
-CREATE USER IF NOT EXISTS 'member2'@'localhost' IDENTIFIED BY '12345';
-CREATE USER IF NOT EXISTS 'member3'@'localhost' IDENTIFIED BY '12345';
+-- Grant roles to users
+GRANT librarian TO 'lib1'@'localhost';
+GRANT catalog_assistant TO 'cat1'@'localhost';
+GRANT viewer TO 'view1'@'localhost';
+GRANT sys_admin TO 'admin1'@'localhost';
 
---  Grant access
-GRANT 'member2_role' TO 'member2'@'localhost';
-GRANT 'member3_role' TO 'member3'@'localhost';
+-- Privileges for the librarian
+GRANT SELECT, INSERT, UPDATE, DELETE ON library_system.book TO librarian;
+GRANT SELECT, INSERT, UPDATE, DELETE ON library_system.author TO librarian;
+GRANT SELECT, INSERT, UPDATE, DELETE ON library_system.book_author TO librarian;
+GRANT SELECT, INSERT, UPDATE ON library_system.book_language TO librarian;
+GRANT SELECT, INSERT, UPDATE ON library_system.publisher TO librarian;
 
--- For member 2 to access publisher and book_language tables
-GRANT SELECT ON library_system.publisher TO 'member2_role';
-GRANT SELECT ON library_system.book_language TO 'member2_role';
+-- Privileges for the catalo_assistant
+GRANT SELECT, INSERT ON library_system.book TO catalog_assistant;
+GRANT SELECT, INSERT ON library_system.author TO catalog_assistant;
+GRANT SELECT, INSERT ON library_system.book_author TO catalog_assistant;
+GRANT SELECT ON library_system.publisher TO catalog_assistant;
 
--- For member 3 to access book table
-GRANT SELECT ON library_system.book TO 'member3_role';
+-- Privileges for the viewer - can view books and author info
+GRANT SELECT ON library_system.book TO viewer;
+GRANT SELECT ON library_system.author TO viewer;
+GRANT SELECT ON library_system.book_language TO viewer;
+GRANT SELECT ON library_system.publisher TO viewer;
+
+-- Privileges for the system admin - full access
+GRANT ALL PRIVILEGES ON library_system.* TO sys_admin;
 
 
 
