@@ -326,3 +326,143 @@ SELECT * FROM customer;
 
 -- Retrieve all order line records
 SELECT * FROM order_line;
+
+
+-- Roles table
+CREATE TABLE roles (
+    role_id INT PRIMARY KEY AUTO_INCREMENT,
+    role_name VARCHAR(50) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Permissions Table 
+CREATE TABLE permissions (
+    permission_id INT PRIMARY KEY AUTO_INCREMENT,
+    permission_name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT
+);
+
+-- Junction Table
+CREATE TABLE role_permissions (
+    role_id INT,
+    permission_id INT,
+    PRIMARY KEY (role_id, permission_id),
+    FOREIGN KEY (role_id) REFERENCES roles(role_id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(permission_id)
+);
+ALTER TABLE customer 
+ADD COLUMN role_id INT DEFAULT 2, 
+ADD FOREIGN KEY (role_id) REFERENCES roles(role_id);
+ADD FOREIGN KEY (role_id) REFERENCES roles(role_id);
+
+-- Insert core roles
+INSERT INTO roles (role_name, description) VALUES
+('Admin', 'Full system access'),
+('Customer', 'Can manage own profile/addresses'),
+('Guest', 'Read-only access');
+
+-- Insert permissions
+INSERT INTO permissions (permission_name, description) VALUES
+('manage_users', 'Create/update/delete users'),
+('manage_own_profile', 'Update personal details'),
+('view_products', 'Browse products'),
+('purchase', 'Make purchases');
+
+-- Assign permissions to roles
+INSERT INTO role_permissions VALUES
+(1, 1), (1, 2), (1, 3), (1, 4),
+(2, 2), (2, 3), (2, 4);           
+
+-- Query to check user permission to purchase
+SELECT COUNT(*) > 0 AS can_purchase
+FROM customer c
+JOIN role_permissions rp ON c.role_id = rp.role_id
+JOIN permissions p ON rp.permission_id = p.permission_id
+WHERE c.customer_id = 3 AND p.permission_name = 'purchase';
+
+-- Check customer role
+SELECT c.first_name, c.last_name, r.role_name
+FROM customer c
+JOIN roles r ON c.role_id = r.role_id;
+
+-- Role assignment
+CREATE TABLE role_assignments (
+    assignment_id INT PRIMARY KEY AUTO_INCREMENT,
+    customer_id INT NOT NULL COMMENT 'User getting the role',
+    assigned_by INT NOT NULL COMMENT 'Admin who assigned this',
+    role_id INT NOT NULL,
+    assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (customer_id) REFERENCES customer(customer_id),
+    FOREIGN KEY (assigned_by) REFERENCES customer(customer_id),
+    FOREIGN KEY (role_id) REFERENCES roles(role_id)
+);
+
+-- Accessible tables
+CREATE TABLE accessible_tables (
+    table_id INT PRIMARY KEY AUTO_INCREMENT,
+    table_name VARCHAR(50) NOT NULL UNIQUE
+);
+
+-- Permissions to specific tables
+CREATE TABLE permission_tables (
+    permission_id INT,
+    table_id INT,
+    PRIMARY KEY (permission_id, table_id),
+    FOREIGN KEY (permission_id) REFERENCES permissions(permission_id),
+    FOREIGN KEY (table_id) REFERENCES accessible_tables(table_id)
+);
+
+-- Insert data
+INSERT INTO accessible_tables (table_name) VALUES
+('customer'),
+('address'),
+('orders'),
+('products');
+
+-- Link permissions to tables )
+INSERT INTO permission_tables VALUES
+(1, 1), 
+(2, 1),  
+(3, 4),  
+(4, 3);  
+
+-- Query of modified user assignments
+INSERT INTO role_assignments (customer_id, assigned_by, role_id)
+VALUES (3, 1, 2);  
+
+-- Permission check
+SELECT COUNT(*) > 0 AS can_purchase
+FROM customer c
+JOIN role_permissions rp ON c.role_id = rp.role_id
+JOIN permissions p ON rp.permission_id = p.permission_id
+JOIN permission_tables pt ON p.permission_id = pt.permission_id
+JOIN accessible_tables t ON pt.table_id = t.table_id
+WHERE c.customer_id = 3 
+AND p.permission_name = 'purchase'
+AND t.table_name = 'orders';
+
+-- who assigned role to who
+SELECT 
+    c.email AS user,
+    r.role_name,
+    admin.email AS assigned_by,
+    ra.assigned_at
+FROM role_assignments ra
+JOIN customer c ON ra.customer_id = c.customer_id
+JOIN roles r ON ra.role_id = r.role_id
+JOIN customer admin ON ra.assigned_by = admin.customer_id;
+
+-- Role assignment history
+SELECT 
+    c.customer_id,
+    c.first_name,
+    c.last_name,
+    c.email,
+    r.role_name,
+    CONCAT(a.first_name, ' ', a.last_name) AS assigned_by_admin,
+    ra.assigned_at
+FROM customer c
+JOIN roles r ON c.role_id = r.role_id
+LEFT JOIN role_assignments ra ON c.customer_id = ra.customer_id
+LEFT JOIN customer a ON ra.assigned_by = a.customer_id
+ORDER BY c.customer_id;
